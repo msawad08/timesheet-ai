@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto, UpdateProjectDto } from '@libs/shared-dto';
 
@@ -6,19 +6,23 @@ import { CreateProjectDto, UpdateProjectDto } from '@libs/shared-dto';
 export class ProjectService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(tenantId: string) {
+  async findAll(tenantId?: string) {
+    const where = tenantId ? { tenantId } : {};
     return this.prisma.project.findMany({
-      where: { tenantId },
+      where,
       orderBy: { name: 'asc' },
     });
   }
 
-  async findOne(id: string, tenantId: string) {
-    const project = await this.prisma.project.findFirst({
-      where: { id, tenantId },
+  async findOne(id: string, tenantId?: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id },
     });
     if (!project) {
       throw new NotFoundException(`Project with ID ${id} not found`);
+    }
+    if (tenantId && project.tenantId !== tenantId) {
+      throw new ForbiddenException('Cross-tenant resource access is forbidden');
     }
     return project;
   }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTimeEntryDto, UpdateTimeEntryDto } from '@libs/shared-dto';
 
@@ -6,12 +6,14 @@ import { CreateTimeEntryDto, UpdateTimeEntryDto } from '@libs/shared-dto';
 export class TimeEntryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllForUser(userId: string, tenantId: string) {
+  async findAllForUser(userId: string, tenantId?: string) {
+    const where: any = { userId };
+    if (tenantId) {
+      where.project = { tenantId };
+    }
+
     return this.prisma.timeEntry.findMany({
-      where: {
-        userId,
-        project: { tenantId },
-      },
+      where,
       include: {
         project: {
           select: { id: true, name: true },
@@ -21,14 +23,17 @@ export class TimeEntryService {
     });
   }
 
-  async create(dto: CreateTimeEntryDto, userId: string, tenantId: string) {
-    // Validate project belongs to user's tenant
-    const project = await this.prisma.project.findFirst({
-      where: { id: dto.projectId, tenantId },
+  async create(dto: CreateTimeEntryDto, userId: string, tenantId?: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: dto.projectId },
     });
 
     if (!project) {
-      throw new NotFoundException('Project not found within this tenant');
+      throw new NotFoundException('Project not found');
+    }
+
+    if (tenantId && project.tenantId !== tenantId) {
+      throw new ForbiddenException('Cannot associate time entry with a project belonging to another tenant');
     }
 
     return this.prisma.timeEntry.create({
@@ -48,17 +53,22 @@ export class TimeEntryService {
     });
   }
 
-  async update(id: string, dto: UpdateTimeEntryDto, userId: string, tenantId: string) {
-    const existing = await this.prisma.timeEntry.findFirst({
-      where: {
-        id,
-        userId,
-        project: { tenantId },
-      },
+  async update(id: string, dto: UpdateTimeEntryDto, userId: string, tenantId?: string) {
+    const existing = await this.prisma.timeEntry.findUnique({
+      where: { id },
+      include: { project: true },
     });
 
     if (!existing) {
-      throw new NotFoundException('Time entry not found or unauthorized');
+      throw new NotFoundException('Time entry not found');
+    }
+
+    if (tenantId && existing.project.tenantId !== tenantId) {
+      throw new ForbiddenException('Cross-tenant resource modification is forbidden');
+    }
+
+    if (userId && existing.userId !== userId) {
+      throw new ForbiddenException('Cannot modify time entry of another user');
     }
 
     return this.prisma.timeEntry.update({
@@ -73,17 +83,22 @@ export class TimeEntryService {
     });
   }
 
-  async delete(id: string, userId: string, tenantId: string) {
-    const existing = await this.prisma.timeEntry.findFirst({
-      where: {
-        id,
-        userId,
-        project: { tenantId },
-      },
+  async delete(id: string, userId: string, tenantId?: string) {
+    const existing = await this.prisma.timeEntry.findUnique({
+      where: { id },
+      include: { project: true },
     });
 
     if (!existing) {
-      throw new NotFoundException('Time entry not found or unauthorized');
+      throw new NotFoundException('Time entry not found');
+    }
+
+    if (tenantId && existing.project.tenantId !== tenantId) {
+      throw new ForbiddenException('Cross-tenant resource modification is forbidden');
+    }
+
+    if (userId && existing.userId !== userId) {
+      throw new ForbiddenException('Cannot modify time entry of another user');
     }
 
     return this.prisma.timeEntry.delete({

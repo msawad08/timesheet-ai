@@ -17,7 +17,9 @@
     "build:gateway": "npm run build --workspace=apps/api-gateway",
     "build:worker": "npm run build --workspace=apps/ai-worker",
     "build:web": "npm run build --workspace=apps/web",
+    "test": "npm run test:casl && npm run test:e2e",
     "test:casl": "npm run test --workspace=libs/security-casl",
+    "test:e2e": "npm run test:e2e --workspace=apps/api-gateway",
     "db:generate": "npm run generate --workspace=libs/core-prisma",
     "db:migrate": "npm run migrate --workspace=libs/core-prisma",
     "db:seed": "npm run seed --workspace=libs/core-prisma"

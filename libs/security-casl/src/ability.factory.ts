@@ -33,6 +33,12 @@ export class AbilityFactory {
       can('create', 'TimeEntry', { userId: user.id, tenantId: user.tenantId } as any);
       can('update', 'TimeEntry', { userId: user.id, tenantId: user.tenantId } as any);
       can('delete', 'TimeEntry', { userId: user.id, tenantId: user.tenantId } as any);
+    } else if (user.role === Role.MANAGER) {
+      can('read', 'Project', { tenantId: user.tenantId } as any);
+      can('create', 'Project', { tenantId: user.tenantId } as any);
+      can('update', 'Project', { tenantId: user.tenantId } as any);
+      can('read', 'TimeEntry', { tenantId: user.tenantId } as any);
+      can('manage', 'TimeEntry', { tenantId: user.tenantId } as any);
     }
 
     // If database is connected, query and compile dynamic PermissionRules
