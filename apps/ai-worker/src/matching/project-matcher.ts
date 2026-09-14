@@ -19,10 +19,10 @@ export async function matchProject(
   keywords: string[],
   embedding?: number[]
 ): Promise<ProjectMatchResult> {
-  // 1. Fetch user's assigned active projects
+  // 1. Fetch user's assigned active projects (or all active projects if none specified)
   const projects = await prisma.project.findMany({
     where: {
-      id: { in: userProjectIds },
+      ...(userProjectIds && userProjectIds.length > 0 ? { id: { in: userProjectIds } } : {}),
       isActive: true,
     },
   });

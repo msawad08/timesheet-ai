@@ -21,21 +21,33 @@ export function useSseChat() {
     const aiWorkerUrl =
       process.env.NEXT_PUBLIC_AI_WORKER_URL || 'http://localhost:3002';
 
+    const effectiveToken =
+      token ||
+      (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null);
+
     try {
       const response = await fetch(`${aiWorkerUrl}/api/ai/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
         },
         body: JSON.stringify({ message: messageText }),
       });
 
       if (!response.ok) {
-        const errText = await response.text();
+        let errorDetail = response.statusText;
+        try {
+          const errJson = await response.json();
+          errorDetail = errJson.error || errJson.message || JSON.stringify(errJson);
+        } catch {
+          const errText = await response.text();
+          if (errText) errorDetail = errText;
+        }
+
         setMessages((prev) => [
           ...prev,
-          { sender: 'ai', text: `Error: ${response.statusText} - ${errText}` },
+          { sender: 'ai', text: `Error: ${errorDetail}` },
         ]);
         setIsStreaming(false);
         return;

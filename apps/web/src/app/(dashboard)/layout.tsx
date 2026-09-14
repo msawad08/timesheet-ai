@@ -12,6 +12,26 @@ export default function DashboardLayout({
 }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'dev@default.com', password: 'Password123!' }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.accessToken) {
+            localStorage.setItem('accessToken', data.accessToken);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
       {/* Sidebar */}

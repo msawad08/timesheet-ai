@@ -19,7 +19,8 @@ export function ChatSidebar({ isOpen, onClose, onEntryCommitted }: ChatSidebarPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || isStreaming) return;
-    sendMessage(inputText);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    sendMessage(inputText, token || undefined);
     setInputText('');
   };
 

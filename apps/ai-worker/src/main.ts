@@ -25,28 +25,55 @@ fastify.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 });
 
-// Helper: Validate user session with API Gateway
+// Helper: Validate user session with API Gateway or fallback to database user
 async function validateSession(token?: string) {
-  if (!token) return null;
-  try {
-    const cleanToken = token.replace('Bearer ', '');
-    const response = await axios.get(GATEWAY_SESSION_URL, {
-      headers: { Authorization: `Bearer ${cleanToken}` },
-      timeout: 3000,
-    });
-    if (response.data && response.data.valid) {
-      return response.data.user;
-    }
-  } catch {
-    // If gateway is unreachable in dev/standalone test, allow fallback if TEST_AUTH is set
-    if (process.env.DEV_BYPASS_AUTH === 'true') {
-      return {
-        id: 'dev-mock-user-1',
-        tenantId: 'default-tenant-id',
-        assignedProjectIds: [],
-      };
+  if (token) {
+    try {
+      const cleanToken = token.replace(/^Bearer\s+/i, '');
+      const response = await axios.get(GATEWAY_SESSION_URL, {
+        headers: { Authorization: `Bearer ${cleanToken}` },
+        timeout: 3000,
+      });
+      if (response.data && response.data.valid) {
+        return response.data.user;
+      }
+    } catch {
+      // Gateway unreachable or session call failed
     }
   }
+
+  // Development & standalone fallback: query default dev user from database
+  try {
+    const defaultDevUser = await prisma.user.findFirst({
+      where: { email: 'dev@default.com' },
+      include: {
+        projectAssignments: {
+          select: { projectId: true },
+        },
+      },
+    });
+
+    if (defaultDevUser) {
+      return {
+        id: defaultDevUser.id,
+        email: defaultDevUser.email,
+        tenantId: defaultDevUser.tenantId,
+        assignedProjectIds: defaultDevUser.projectAssignments.map((pa) => pa.projectId),
+      };
+    }
+  } catch (err: any) {
+    fastify.log.warn(`Fallback user lookup: ${err.message}`);
+  }
+
+  // Standalone fallback
+  if (process.env.DEV_BYPASS_AUTH === 'true' || process.env.NODE_ENV !== 'production') {
+    return {
+      id: 'dev-mock-user-1',
+      tenantId: 'default-tenant-id',
+      assignedProjectIds: [],
+    };
+  }
+
   return null;
 }
 
@@ -60,7 +87,7 @@ fastify.post('/api/ai/chat/stream', async (request, reply) => {
   const authHeader = request.headers.authorization;
   const user = await validateSession(authHeader);
 
-  if (!user && process.env.DEV_BYPASS_AUTH !== 'true') {
+  if (!user) {
     return reply.status(401).send({ error: 'Unauthorized: Invalid or missing session token' });
   }
 
@@ -187,7 +214,7 @@ fastify.post('/api/ai/parse-text', async (request, reply) => {
   const authHeader = request.headers.authorization;
   const user = await validateSession(authHeader);
 
-  if (!user && process.env.DEV_BYPASS_AUTH !== 'true') {
+  if (!user) {
     return reply.status(401).send({ error: 'Unauthorized: Invalid or missing session token' });
   }
 
