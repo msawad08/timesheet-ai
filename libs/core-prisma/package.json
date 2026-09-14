@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "generate": "prisma generate",
-    "migrate": "prisma migrate dev",
+    "migrate": "prisma migrate dev --name init_database",
     "seed": "tsx prisma/seed.ts"
   },
   "prisma": {
