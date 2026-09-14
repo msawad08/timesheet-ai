@@ -101,18 +101,29 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_AI_WORKER_URL=http://localhost:3002
 ```
 
-### 4. Database Setup
+### 🏃 Running the Application Locally
 
-Generate the Prisma client and run database migrations:
+When you are ready to test live against a database and Ollama:
 
 ```bash
-npm run generate --workspace=libs/core-prisma
-npm run migrate --workspace=libs/core-prisma
+# 1. Start database, cache, and local AI containers
+docker compose up -d
+
+# 2. Run initial database migration and seed default data
+npm run db:migrate
+npm run db:seed
+
+# 3. Start all services concurrently
+npm run dev
 ```
 
-### 5. Running the Services
+- **Web Client**: http://localhost:3000
+- **API Gateway**: http://localhost:3001
+- **Fastify AI Worker**: http://localhost:3002
 
-Run services individually in development mode:
+#### Individual Service Commands
+
+You can also run services individually:
 
 ```bash
 # Start API Gateway (NestJS) -> http://localhost:3001
@@ -121,7 +132,7 @@ npm run dev:gateway
 # Start AI Worker (Fastify) -> http://localhost:3002
 npm run dev:worker
 
-# Start Web Frontend (Next.js) -> http://localhost:3000
+# Start Web Client (Next.js) -> http://localhost:3000
 npm run dev:web
 ```
 
@@ -131,6 +142,11 @@ npm run dev:web
 
 | Command | Description |
 | :--- | :--- |
+| `npm run dev` | Starts all services (Gateway, Worker, Web) concurrently |
+| `npm run build` | Builds all shared libraries and applications |
+| `npm run db:generate` | Generates the Prisma client from schema |
+| `npm run db:migrate` | Runs database migrations |
+| `npm run db:seed` | Seeds database with tenant, roles, and initial projects |
 | `npm run dev:gateway` | Starts the API Gateway in development/watch mode |
 | `npm run dev:worker` | Starts the AI Worker in development/watch mode |
 | `npm run dev:web` | Starts the Next.js frontend in development mode |
