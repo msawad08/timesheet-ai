@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: timesheet-postgres
+    environment:
+      POSTGRES_USER: timesheet_admin
+      POSTGRES_PASSWORD: SecretPassword123
+      POSTGRES_DB: timesheet_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timesheet_admin -d timesheet_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: timesheet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: timesheet-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_storage:/root/.ollama
+    entrypoint: >
+      /bin/sh -c "
+      ollama serve &
+      sleep 5 &&
+      ollama pull qwen2.5:7b &&
+      ollama pull nomic-embed-text &&
+      wait
+      "
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_storage:

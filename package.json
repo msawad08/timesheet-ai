@@ -1,0 +1,23 @@
+{
+  "name": "timesheet-ai",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
+  "scripts": {
+    "dev:gateway": "npm run dev --workspace=apps/api-gateway",
+    "dev:worker": "npm run dev --workspace=apps/ai-worker",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build:gateway": "npm run build --workspace=apps/api-gateway",
+    "build:worker": "npm run build --workspace=apps/ai-worker",
+    "build:web": "npm run build --workspace=apps/web",
+    "test:casl": "npm run test --workspace=libs/security-casl"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  }
+}
