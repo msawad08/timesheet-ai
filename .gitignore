@@ -1,2 +1,9 @@
 docs/
 plan.md
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+*.log
+.env
+.env.local

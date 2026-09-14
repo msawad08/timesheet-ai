@@ -21,7 +21,10 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.1",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "@libs/core-prisma": "*",
+    "@libs/security-casl": "*",
+    "@libs/shared-dto": "*"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

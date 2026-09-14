@@ -1,0 +1,124 @@
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+enum Role {
+  SUPERADMIN
+  SUPERMAINTAINER
+  ADMIN
+  MAINTAINER
+  MANAGER
+  DEVELOPER
+  STAFF
+  CUSTOM
+}
+
+model Tenant {
+  id              String           @id @default(uuid())
+  name            String
+  slug            String           @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  users           User[]
+  projects        Project[]
+  permissionRules PermissionRule[]
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  name               String?
+  password           String              // BCrypt Hashed
+  role               Role                @default(DEVELOPER)
+  tenantId           String
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  refreshTokens      RefreshToken[]
+  projectAssignments ProjectAssignment[]
+  timeEntries        TimeEntry[]
+  permissionRules    PermissionRule[]
+
+  @@index([tenantId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  isRevoked Boolean  @default(false)
+
+  @@index([userId])
+}
+
+model Project {
+  id          String              @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean             @default(true)
+  tenantId    String
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignments ProjectAssignment[]
+  timeEntries TimeEntry[]
+
+  @@index([tenantId])
+}
+
+model ProjectAssignment {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+model TimeEntry {
+  id              String                      @id @default(uuid())
+  userId          String
+  projectId       String
+  date            DateTime                    @db.Date
+  durationMinutes Int
+  rawComment      String?
+  enrichedComment String
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  user            User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project         Project                     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // Vector embeddings for semantic search matching (384 dimensions from Ollama / nomic-embed / all-MiniLM)
+  embedding       Unsupported("vector(384)")?
+
+  @@index([userId, date])
+  @@index([projectId])
+}
+
+model PermissionRule {
+  id         String   @id @default(uuid())
+  role       Role?
+  userId     String?
+  tenantId   String
+  action     String   // e.g., "manage", "create", "read", "update", "delete"
+  subject    String   // e.g., "TimeEntry", "Project", "User", "all"
+  conditions String?  // MongoDB-style serialized JSON string logic
+  inverted   Boolean  @default(false)
+  reason     String?
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+}

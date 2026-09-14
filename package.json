@@ -8,13 +8,19 @@
     "libs/*"
   ],
   "scripts": {
+    "dev": "concurrently \"npm:dev:gateway\" \"npm:dev:worker\" \"npm:dev:web\"",
+    "build:libs": "npm run build --workspace=libs/shared-dto && npm run build --workspace=libs/core-prisma && npm run build --workspace=libs/security-casl",
+    "build": "npm run build:libs && concurrently \"npm:build:gateway\" \"npm:build:worker\" \"npm:build:web\"",
     "dev:gateway": "npm run dev --workspace=apps/api-gateway",
     "dev:worker": "npm run dev --workspace=apps/ai-worker",
     "dev:web": "npm run dev --workspace=apps/web",
     "build:gateway": "npm run build --workspace=apps/api-gateway",
     "build:worker": "npm run build --workspace=apps/ai-worker",
     "build:web": "npm run build --workspace=apps/web",
-    "test:casl": "npm run test --workspace=libs/security-casl"
+    "test:casl": "npm run test --workspace=libs/security-casl",
+    "db:generate": "npm run generate --workspace=libs/core-prisma",
+    "db:migrate": "npm run migrate --workspace=libs/core-prisma",
+    "db:seed": "npm run seed --workspace=libs/core-prisma"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

@@ -11,7 +11,8 @@
   "dependencies": {
     "@casl/ability": "^6.5.0",
     "@casl/prisma": "^1.4.1",
-    "@prisma/client": "^5.10.0"
+    "@prisma/client": "^5.10.0",
+    "@libs/core-prisma": "*"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
