@@ -73,33 +73,38 @@ docker compose up -d
 
 ### 3. Configure Environment Variables
 
-Create environment configuration files for the applications as needed:
+Copy the provided `.env.example` file to `.env` at the repository root:
 
-#### API Gateway (`apps/api-gateway/.env`)
+```bash
+cp .env.example .env
+```
+
+The default `.env.example` comes preconfigured with local Docker Compose defaults:
+
 ```env
+# Database Connection (PostgreSQL with pgvector)
+DATABASE_URL="postgresql://timesheet_admin:SecretPassword123@localhost:5432/timesheet_db?schema=public"
+
+# Redis Cache
+REDIS_URL="redis://localhost:6379"
+
+# API Gateway Configuration
+JWT_SECRET="development-secret-key-12345"
+ENV_MODE="SAAS"
 PORT=3001
-DATABASE_URL=postgresql://timesheet_admin:SecretPassword123@localhost:5432/timesheet_db?schema=public
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-jwt-secret-key
-ENV_MODE=SAAS
+
+# Fastify AI Worker Configuration
+GATEWAY_SESSION_URL="http://localhost:3001/api/auth/validate-session"
+OLLAMA_URL="http://localhost:11434"
+OLLAMA_MODEL="qwen2.5:7b"
+OLLAMA_EMBED_MODEL="nomic-embed-text"
+
+# Next.js Web Client Configuration
+NEXT_PUBLIC_API_URL="http://localhost:3001"
+NEXT_PUBLIC_AI_WORKER_URL="http://localhost:3002"
 ```
 
-#### AI Worker (`apps/ai-worker/.env`)
-```env
-PORT=3002
-DATABASE_URL=postgresql://timesheet_admin:SecretPassword123@localhost:5432/timesheet_db?schema=public
-GATEWAY_SESSION_URL=http://localhost:3001/api/auth/validate-session
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:7b
-OLLAMA_EMBED_MODEL=nomic-embed-text
-```
-
-#### Web Client (`apps/web/.env.local`)
-```env
-PORT=3000
-NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_AI_WORKER_URL=http://localhost:3002
-```
+> **Note**: For running migrations directly inside `libs/core-prisma`, ensure `DATABASE_URL` is present in `libs/core-prisma/.env` or exported in your environment.
 
 ### 🏃 Running the Application Locally
 
