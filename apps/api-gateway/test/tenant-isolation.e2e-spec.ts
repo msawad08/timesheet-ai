@@ -45,6 +45,11 @@ describe('Multi-Tenant Isolation & Standalone E2E Tests', () => {
         const proj = projects.find((p) => p.id === where.id);
         return { ...proj, ...data };
       }),
+      delete: jest.fn().mockImplementation(({ where }) => {
+        const idx = projects.findIndex((p) => p.id === where.id);
+        if (idx !== -1) projects.splice(idx, 1);
+        return { id: where.id };
+      }),
     },
     timeEntry: {
       findMany: jest.fn().mockImplementation(({ where }) => {
@@ -186,6 +191,24 @@ describe('Multi-Tenant Isolation & Standalone E2E Tests', () => {
 
       expect(res.status).toBe(403);
       expect(res.body.message).toContain('Cross-tenant resource modification is forbidden');
+    });
+
+    it('should reject cross-tenant project deletion (403 Forbidden)', async () => {
+      const res = await request(app.getHttpServer())
+        .delete(`/api/projects/${PROJECT_B_ID}`)
+        .set('Authorization', 'Bearer user-a:tenant-a');
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain('Cross-tenant resource access is forbidden');
+    });
+
+    it('should allow deleting own tenant project (200 OK)', async () => {
+      const res = await request(app.getHttpServer())
+        .delete(`/api/projects/${PROJECT_A_ID}`)
+        .set('Authorization', 'Bearer user-a:tenant-a');
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(PROJECT_A_ID);
     });
 
     it('should reject request missing tenant context in token and header (403 Forbidden)', async () => {

@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Bot, Send, Sparkles, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Send, Sparkles, AlertCircle, CheckCircle2, X, HelpCircle } from 'lucide-react';
 import { useSseChat } from '@/hooks/use-sse-chat';
+import { DisambiguationModal, AmbiguousEntry } from './disambiguation-modal';
+
+const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:3001';
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -13,6 +16,48 @@ interface ChatSidebarProps {
 export function ChatSidebar({ isOpen, onClose, onEntryCommitted }: ChatSidebarProps) {
   const [inputText, setInputText] = useState('');
   const { messages, isStreaming, parsedData, sendMessage, setParsedData } = useSseChat();
+  const [disambiguationEntry, setDisambiguationEntry] = useState<AmbiguousEntry | null>(null);
+  const [allProjects, setAllProjects] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('accessToken');
+    fetch(`${GATEWAY_URL}/api/projects`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setAllProjects(data);
+        } else {
+          setAllProjects([
+            { id: '11111111-1111-4111-8111-111111111111', name: 'Core Engineering' },
+            { id: '22222222-2222-4222-8222-222222222222', name: 'Billing Engine' },
+            { id: '33333333-3333-4333-8333-333333333333', name: 'Client Portal UI' },
+          ]);
+        }
+      })
+      .catch(() => {
+        setAllProjects([
+          { id: '11111111-1111-4111-8111-111111111111', name: 'Core Engineering' },
+          { id: '22222222-2222-4222-8222-222222222222', name: 'Billing Engine' },
+          { id: '33333333-3333-4333-8333-333333333333', name: 'Client Portal UI' },
+        ]);
+      });
+  }, []);
+
+  // When parsed data arrives with status AMBIGUOUS_PROJECT, open modal for first ambiguous entry
+  useEffect(() => {
+    if (parsedData?.status === 'AMBIGUOUS_PROJECT' && parsedData.data?.entries?.length) {
+      const firstEntry = parsedData.data.entries[0];
+      setDisambiguationEntry({
+        ...firstEntry,
+        suggestedProjects: firstEntry.suggestedProjects || parsedData.data.suggestedProjects,
+      });
+    }
+  }, [parsedData]);
 
   if (!isOpen) return null;
 
@@ -148,6 +193,17 @@ export function ChatSidebar({ isOpen, onClose, onEntryCommitted }: ChatSidebarPr
                     </div>
                   )}
 
+                  {entry.suggestedProjects && entry.suggestedProjects.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setDisambiguationEntry(entry)}
+                      className="w-full mt-1.5 py-1 px-2 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-medium flex items-center justify-center gap-1.5 transition"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      Resolve Ambiguity ({entry.suggestedProjects.length} matches)
+                    </button>
+                  )}
+
                   <button
                     onClick={() => handleApplyEntry(entry)}
                     className="w-full mt-2 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-medium transition"
@@ -181,6 +237,18 @@ export function ChatSidebar({ isOpen, onClose, onEntryCommitted }: ChatSidebarPr
           </button>
         </div>
       </form>
+
+      {/* Disambiguation Modal */}
+      <DisambiguationModal
+        isOpen={Boolean(disambiguationEntry)}
+        onClose={() => setDisambiguationEntry(null)}
+        entry={disambiguationEntry}
+        allProjects={allProjects}
+        onConfirm={(entry, selectedProjectId) => {
+          handleApplyEntry(entry, selectedProjectId);
+          setDisambiguationEntry(null);
+        }}
+      />
     </aside>
   );
 }

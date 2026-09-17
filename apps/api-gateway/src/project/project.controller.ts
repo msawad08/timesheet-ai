@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -44,5 +45,11 @@ export class ProjectController {
   ) {
     const tenantId = req.user?.tenantId || req.tenantId;
     return this.projectService.update(id, dto, tenantId);
+  }
+
+  @Delete(':id')
+  async delete(@Param('id') id: string, @Req() req: any) {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    return this.projectService.delete(id, tenantId);
   }
 }

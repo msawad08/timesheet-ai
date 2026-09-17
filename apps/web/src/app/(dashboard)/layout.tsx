@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Bot, Clock, LayoutDashboard, FolderKanban, Settings, LogOut } from 'lucide-react';
 import { ChatSidebar } from '@/components/chatbot-sidebar/chat-sidebar';
 
@@ -11,6 +12,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const pathname = usePathname();
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -52,10 +54,26 @@ export default function DashboardLayout({
           <nav className="space-y-1 text-xs">
             <Link
               href="/dashboard"
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium shadow"
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition ${
+                pathname === '/dashboard'
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
             >
               <LayoutDashboard className="w-4 h-4" /> Timesheet Grid
             </Link>
+
+            <Link
+              href="/projects"
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition ${
+                pathname === '/projects'
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <FolderKanban className="w-4 h-4" /> Projects
+            </Link>
+
             <button
               onClick={() => setIsChatOpen(true)}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 font-medium transition"

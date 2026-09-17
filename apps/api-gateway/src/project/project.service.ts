@@ -49,4 +49,11 @@ export class ProjectService {
       },
     });
   }
+
+  async delete(id: string, tenantId: string) {
+    await this.findOne(id, tenantId);
+    return this.prisma.project.delete({
+      where: { id },
+    });
+  }
 }
