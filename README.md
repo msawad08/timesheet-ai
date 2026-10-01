@@ -149,6 +149,9 @@ npm run dev:web
 | :--- | :--- |
 | `npm run dev` | Starts all services (Gateway, Worker, Web) concurrently |
 | `npm run build` | Builds all shared libraries and applications |
+| `npm test` | Runs the full automated verification suite (CASL unit tests + E2E isolation tests) |
+| `npm run test:casl` | Runs unit tests for CASL authorization logic |
+| `npm run test:e2e` | Runs multi-tenant boundary and self-hosted mode E2E integration tests |
 | `npm run db:generate` | Generates the Prisma client from schema |
 | `npm run db:migrate` | Runs database migrations |
 | `npm run db:seed` | Seeds database with tenant, roles, and initial projects |
@@ -158,7 +161,6 @@ npm run dev:web
 | `npm run build:gateway` | Builds the API Gateway for production |
 | `npm run build:worker` | Builds the AI Worker for production |
 | `npm run build:web` | Builds the Next.js frontend for production |
-| `npm run test:casl` | Runs unit tests for CASL authorization logic |
 
 ---
 

@@ -4,7 +4,7 @@ COPY package*.json ./
 COPY apps/ai-worker ./apps/ai-worker
 COPY libs/core-prisma ./libs/core-prisma
 RUN npm ci
-RUN npm run build --workspace=apps/ai-worker
+RUN npm run build --workspace=libs/core-prisma && npm run build --workspace=apps/ai-worker
 
 FROM node:20-alpine
 WORKDIR /app

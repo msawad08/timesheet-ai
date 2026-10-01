@@ -6,7 +6,7 @@ COPY libs/core-prisma ./libs/core-prisma
 COPY libs/shared-dto ./libs/shared-dto
 COPY libs/security-casl ./libs/security-casl
 RUN npm ci
-RUN npm run build --workspace=apps/api-gateway
+RUN npm run build:libs && npm run build --workspace=apps/api-gateway
 
 FROM node:20-alpine
 WORKDIR /app

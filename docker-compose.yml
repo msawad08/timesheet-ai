@@ -47,6 +47,58 @@ services:
       wait
       "
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./apps/api-gateway/Dockerfile
+    container_name: timesheet-api-gateway
+    profiles: ["apps", "full"]
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://timesheet_admin:SecretPassword123@postgres:5432/timesheet_db?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=ProductionSuperSecretJWTKey987654321
+      - ENV_MODE=SAAS
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-worker:
+    build:
+      context: .
+      dockerfile: ./apps/ai-worker/Dockerfile
+    container_name: timesheet-ai-worker
+    profiles: ["apps", "full"]
+    ports:
+      - "3002:3002"
+    environment:
+      - GATEWAY_SESSION_URL=http://api-gateway:3001/api/auth/validate-session
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5:7b
+      - OLLAMA_EMBED_MODEL=nomic-embed-text
+      - DATABASE_URL=postgresql://timesheet_admin:SecretPassword123@postgres:5432/timesheet_db?schema=public
+    depends_on:
+      - postgres
+      - ollama
+
+  web-client:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+    container_name: timesheet-web-client
+    profiles: ["apps", "full"]
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_AI_WORKER_URL=http://localhost:3002
+    depends_on:
+      - api-gateway
+      - ai-worker
+
 volumes:
   postgres_data:
   redis_data:
