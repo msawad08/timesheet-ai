@@ -14,6 +14,12 @@ export default function DashboardLayout({
   const [isChatOpen, setIsChatOpen] = useState(false);
   const pathname = usePathname();
 
+  const [userProfile, setUserProfile] = useState({
+    name: 'Mohammed Sawad',
+    email: 'msawad08@gmail.com',
+    role: 'ADMIN',
+  });
+
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const token = localStorage.getItem('accessToken');
@@ -32,7 +38,25 @@ export default function DashboardLayout({
         })
         .catch(() => {});
     }
-  }, []);
+
+    const saved = localStorage.getItem('timesheet_ai_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setUserProfile({
+          name: parsed.fullName || 'Mohammed Sawad',
+          email: parsed.email || 'msawad08@gmail.com',
+          role: parsed.role || 'ADMIN',
+        });
+      } catch {}
+    }
+  }, [pathname]);
+
+  const getPageTitle = () => {
+    if (pathname === '/projects') return 'Project Configurations';
+    if (pathname === '/settings') return 'Settings & Preferences';
+    return 'Timesheet Overview';
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
@@ -74,6 +98,17 @@ export default function DashboardLayout({
               <FolderKanban className="w-4 h-4" /> Projects
             </Link>
 
+            <Link
+              href="/settings"
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition ${
+                pathname === '/settings'
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Settings className="w-4 h-4" /> Settings
+            </Link>
+
             <button
               onClick={() => setIsChatOpen(true)}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 font-medium transition"
@@ -85,12 +120,12 @@ export default function DashboardLayout({
 
         <div className="pt-4 border-t border-slate-800 space-y-2">
           <div className="px-3 py-2 flex items-center justify-between text-xs text-slate-400">
-            <div>
-              <p className="font-medium text-white">Dev User</p>
-              <p className="text-[10px] text-slate-500">dev@default.com</p>
+            <div className="truncate max-w-[140px]">
+              <p className="font-medium text-white truncate">{userProfile.name}</p>
+              <p className="text-[10px] text-slate-500 truncate">{userProfile.email}</p>
             </div>
-            <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300">
-              DEVELOPER
+            <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 font-semibold shrink-0">
+              {userProfile.role}
             </span>
           </div>
           <Link
@@ -105,7 +140,7 @@ export default function DashboardLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-y-auto">
         <header className="h-14 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-900/30 backdrop-blur">
-          <h2 className="text-sm font-semibold text-white">Timesheet Overview</h2>
+          <h2 className="text-sm font-semibold text-white">{getPageTitle()}</h2>
           <button
             onClick={() => setIsChatOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 text-xs font-medium transition"

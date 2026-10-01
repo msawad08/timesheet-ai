@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Calendar,
   ChevronLeft,
@@ -13,6 +13,13 @@ import {
   AlertCircle,
   Briefcase,
   Layers,
+  Download,
+  FileSpreadsheet,
+  FileCode,
+  Send,
+  CheckCheck,
+  Filter,
+  ChevronDown,
 } from 'lucide-react';
 import { EntryModal, TimeEntryFormData } from './entry-modal';
 
@@ -57,6 +64,12 @@ export function TimesheetGrid({
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Partial<TimeEntryFormData> | null>(null);
+
+  // Export, Filter & Timesheet Submission State
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>('all');
+  const [submittedWeeks, setSubmittedWeeks] = useState<Record<string, boolean>>({});
+  const exportRef = useRef<HTMLDivElement>(null);
 
   // Helper to get token
   const getAuthToken = () => {
@@ -308,6 +321,152 @@ export function TimesheetGrid({
     setTimeout(() => setStatusMessage(null), 3500);
   };
 
+  // Load timesheet submission state from local storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('submitted_timesheets');
+      if (saved) {
+        try {
+          setSubmittedWeeks(JSON.parse(saved));
+        } catch {}
+      }
+    }
+  }, []);
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filtered projects list based on dropdown selection
+  const displayedProjects =
+    selectedProjectFilter === 'all'
+      ? projects
+      : projects.filter((p) => p.id === selectedProjectFilter);
+
+  // Current week derived statistics
+  const currentWeekDateKeys = weekDays.map((d) => d.dateKey);
+  const currentWeekEntries = rawEntries.filter((e) =>
+    currentWeekDateKeys.includes(e.date.split('T')[0])
+  );
+  const currentWeekTotalMinutes = currentWeekEntries.reduce(
+    (acc, e) => acc + e.durationMinutes,
+    0
+  );
+  const targetWeeklyMinutes = 40 * 60; // 40h standard work week
+  const progressPercentage = Math.min(
+    100,
+    Math.round((currentWeekTotalMinutes / targetWeeklyMinutes) * 100)
+  );
+  const currentWeekKey = weekDays[0].dateKey;
+  const isCurrentWeekSubmitted = Boolean(submittedWeeks[currentWeekKey]);
+
+  // Submit / Draft toggle
+  const handleToggleSubmitWeek = () => {
+    const nextState = !isCurrentWeekSubmitted;
+    const updated = { ...submittedWeeks, [currentWeekKey]: nextState };
+    setSubmittedWeeks(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('submitted_timesheets', JSON.stringify(updated));
+    }
+    showStatus(
+      'success',
+      nextState
+        ? `Timesheet for week of ${weekLabel} marked as Submitted!`
+        : `Timesheet reverted to Draft.`
+    );
+  };
+
+  // Export as CSV
+  const handleExportCSV = () => {
+    setIsExportMenuOpen(false);
+    const entriesToExport =
+      selectedProjectFilter === 'all'
+        ? currentWeekEntries
+        : currentWeekEntries.filter((e) => e.projectId === selectedProjectFilter);
+
+    if (entriesToExport.length === 0) {
+      showStatus('error', 'No time entries found to export for this week.');
+      return;
+    }
+
+    const headers = ['Date', 'Project Name', 'Hours Logged', 'Duration (Minutes)', 'Task Description'];
+    const rows = entriesToExport.map((e) => {
+      const proj = projects.find((p) => p.id === e.projectId);
+      const hours = (e.durationMinutes / 60).toFixed(2);
+      const dateStr = e.date.split('T')[0];
+      const comment = (e.rawComment || '').replace(/"/g, '""');
+      return [dateStr, `"${proj?.name || 'Project'}"`, hours, e.durationMinutes.toString(), `"${comment}"`];
+    });
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `timesheet_${weekDays[0].dateKey}_to_${weekDays[6].dateKey}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showStatus('success', 'Timesheet exported to CSV successfully.');
+  };
+
+  // Export as JSON
+  const handleExportJSON = () => {
+    setIsExportMenuOpen(false);
+    const entriesToExport =
+      selectedProjectFilter === 'all'
+        ? currentWeekEntries
+        : currentWeekEntries.filter((e) => e.projectId === selectedProjectFilter);
+
+    if (entriesToExport.length === 0) {
+      showStatus('error', 'No time entries found to export for this week.');
+      return;
+    }
+
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      weekRange: {
+        from: weekDays[0].dateKey,
+        to: weekDays[6].dateKey,
+      },
+      status: isCurrentWeekSubmitted ? 'SUBMITTED' : 'DRAFT',
+      totalEntries: entriesToExport.length,
+      totalMinutes: entriesToExport.reduce((acc, e) => acc + e.durationMinutes, 0),
+      totalHours: Number(
+        (entriesToExport.reduce((acc, e) => acc + e.durationMinutes, 0) / 60).toFixed(2)
+      ),
+      entries: entriesToExport.map((e) => {
+        const proj = projects.find((p) => p.id === e.projectId);
+        return {
+          id: e.id,
+          date: e.date.split('T')[0],
+          projectId: e.projectId,
+          projectName: proj?.name || 'Project',
+          durationMinutes: e.durationMinutes,
+          durationHours: Number((e.durationMinutes / 60).toFixed(2)),
+          description: e.rawComment || '',
+        };
+      }),
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `timesheet_${weekDays[0].dateKey}_to_${weekDays[6].dateKey}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showStatus('success', 'Timesheet exported to JSON successfully.');
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -329,9 +488,9 @@ export function TimesheetGrid({
       )}
 
       {/* Top Controls Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* View switcher & Date navigation */}
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* View switcher, Date navigation & Project Filter */}
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex rounded-lg bg-slate-900 border border-slate-800 p-1">
             {(['daily', 'weekly', 'monthly'] as const).map((mode) => (
               <button
@@ -371,10 +530,61 @@ export function TimesheetGrid({
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Project Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={selectedProjectFilter}
+              onChange={(e) => setSelectedProjectFilter(e.target.value)}
+              className="bg-transparent text-xs text-slate-200 outline-none cursor-pointer pr-1"
+            >
+              <option value="all" className="bg-slate-900 text-slate-200">
+                All Projects ({projects.length})
+              </option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons: Export, Manual Entry, AI Assist */}
         <div className="flex items-center gap-2.5">
+          {/* Export Dropdown */}
+          <div className="relative" ref={exportRef}>
+            <button
+              onClick={() => setIsExportMenuOpen((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition"
+              title="Export Timesheet"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-300" />
+              <span>Export</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+
+            {isExportMenuOpen && (
+              <div className="absolute right-0 mt-1.5 w-44 rounded-xl bg-slate-900 border border-slate-800 shadow-xl py-1 z-30 animate-in fade-in zoom-in-95">
+                <button
+                  onClick={handleExportCSV}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span>Export as CSV</span>
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+                >
+                  <FileCode className="w-4 h-4 text-blue-400" />
+                  <span>Export as JSON</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => {
               setEditingEntry({
@@ -399,6 +609,71 @@ export function TimesheetGrid({
         </div>
       </div>
 
+      {/* Weekly Hours Target & Submission Status Banner */}
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div
+            className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border ${
+              isCurrentWeekSubmitted
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+            }`}
+          >
+            {isCurrentWeekSubmitted ? (
+              <>
+                <CheckCheck className="w-3.5 h-3.5" />
+                <span>SUBMITTED</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span>DRAFT</span>
+              </>
+            )}
+          </div>
+
+          <div>
+            <span className="text-xs text-slate-400 font-medium">Logged this week: </span>
+            <span className="text-sm font-bold text-white">{formatHours(currentWeekTotalMinutes)}</span>
+            <span className="text-xs text-slate-500 font-normal"> / 40.0h target ({progressPercentage}%)</span>
+          </div>
+        </div>
+
+        {/* Progress Bar & Submission Button */}
+        <div className="flex items-center gap-4 w-full md:w-auto justify-end">
+          <div className="hidden sm:block w-36 bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700/50">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                progressPercentage >= 100
+                  ? 'bg-emerald-500'
+                  : progressPercentage >= 50
+                  ? 'bg-blue-500'
+                  : 'bg-amber-500'
+              }`}
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+
+          <button
+            onClick={handleToggleSubmitWeek}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+              isCurrentWeekSubmitted
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-600/20'
+            }`}
+          >
+            {isCurrentWeekSubmitted ? (
+              <>Revert to Draft</>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5" />
+                Submit Timesheet
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* VIEW: WEEKLY MATRIX */}
       {viewMode === 'weekly' && (
         <div className="overflow-x-auto rounded-xl border border-slate-800 glass-panel">
@@ -418,14 +693,14 @@ export function TimesheetGrid({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-300 text-xs">
-              {projects.length === 0 ? (
+              {displayedProjects.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-8 text-slate-500">
                     No active projects. Click &ldquo;Manual Entry&rdquo; to start logging time.
                   </td>
                 </tr>
               ) : (
-                projects.map((project) => {
+                displayedProjects.map((project) => {
                   const rowMinutes = weekDays.reduce((sum, d) => {
                     return sum + getCellTotalMinutes(project.id, d.dateKey);
                   }, 0);
@@ -478,7 +753,7 @@ export function TimesheetGrid({
               <tr className="border-t border-slate-800 bg-slate-900/80 font-bold text-xs text-slate-300">
                 <td className="py-3 px-4">Daily Total</td>
                 {weekDays.map((day) => {
-                  const dayTotal = projects.reduce((acc, p) => {
+                  const dayTotal = displayedProjects.reduce((acc, p) => {
                     return acc + getCellTotalMinutes(p.id, day.dateKey);
                   }, 0);
 
@@ -490,7 +765,7 @@ export function TimesheetGrid({
                 })}
                 <td className="py-3 px-4 text-right text-emerald-400">
                   {formatHours(
-                    projects.reduce((acc, p) => {
+                    displayedProjects.reduce((acc, p) => {
                       return (
                         acc +
                         weekDays.reduce((wAcc, d) => {
@@ -631,7 +906,7 @@ export function TimesheetGrid({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project) => {
+            {displayedProjects.map((project) => {
               const projectTotalMinutes = rawEntries
                 .filter((e) => e.projectId === project.id)
                 .reduce((acc, e) => acc + e.durationMinutes, 0);
