@@ -23,6 +23,7 @@ interface UserSettings {
   orgName: string;
   tenantSlug: string;
   timezone: string;
+  gatewayUrl: string;
   aiWorkerUrl: string;
   aiProvider: string;
   aiModel: string;
@@ -37,6 +38,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   orgName: 'Default Corp',
   tenantSlug: 'default-tenant',
   timezone: 'UTC',
+  gatewayUrl: process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:3001',
   aiWorkerUrl: process.env.NEXT_PUBLIC_AI_WORKER_URL || 'http://localhost:3002',
   aiProvider: 'ollama',
   aiModel: 'qwen2.5:3b',
@@ -51,6 +53,8 @@ export default function SettingsPage() {
   } | null>(null);
   const [isTestingAi, setIsTestingAi] = useState(false);
   const [aiStatus, setAiStatus] = useState<'idle' | 'online' | 'offline'>('idle');
+  const [isTestingGateway, setIsTestingGateway] = useState(false);
+  const [gatewayStatus, setGatewayStatus] = useState<'idle' | 'online' | 'offline'>('idle');
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -102,6 +106,38 @@ export default function SettingsPage() {
       showStatus('error', 'Could not connect to AI Worker service at ' + settings.aiWorkerUrl);
     } finally {
       setIsTestingAi(false);
+    }
+  };
+
+  // Test API Gateway Connectivity
+  const testGatewayConnection = async () => {
+    setIsTestingGateway(true);
+    setGatewayStatus('idle');
+
+    try {
+      const res = await fetch(`${settings.gatewayUrl}/health`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setGatewayStatus('online');
+        showStatus(
+          'success',
+          `API Gateway is online (Database: ${data.dependencies?.database || 'healthy'}, Redis: ${
+            data.dependencies?.redis || 'healthy'
+          })`
+        );
+      } else {
+        setGatewayStatus('offline');
+        showStatus('error', `Gateway returned status ${res.status}.`);
+      }
+    } catch {
+      setGatewayStatus('offline');
+      showStatus('error', 'Could not connect to API Gateway at ' + settings.gatewayUrl);
+    } finally {
+      setIsTestingGateway(false);
     }
   };
 
@@ -277,6 +313,48 @@ export default function SettingsPage() {
                 <Database className="w-3.5 h-3.5" />
                 <span>Multi-Tenant Row Level</span>
               </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-800/60 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                API Gateway URL
+              </label>
+              <input
+                type="text"
+                value={settings.gatewayUrl}
+                onChange={(e) => setSettings({ ...settings, gatewayUrl: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 transition"
+              />
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={testGatewayConnection}
+                disabled={isTestingGateway}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs text-slate-200 transition disabled:opacity-50"
+              >
+                <Activity
+                  className={`w-3.5 h-3.5 ${
+                    gatewayStatus === 'online'
+                      ? 'text-emerald-400'
+                      : gatewayStatus === 'offline'
+                      ? 'text-rose-400'
+                      : 'text-slate-400'
+                  }`}
+                />
+                <span>
+                  {isTestingGateway
+                    ? 'Checking...'
+                    : gatewayStatus === 'online'
+                    ? 'Gateway Online'
+                    : gatewayStatus === 'offline'
+                    ? 'Gateway Offline'
+                    : 'Check Gateway'}
+                </span>
+              </button>
             </div>
           </div>
         </div>

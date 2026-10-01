@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
@@ -13,5 +14,6 @@ import { TimeEntryModule } from './time-entry/time-entry.module';
     ProjectModule,
     TimeEntryModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
