@@ -194,3 +194,31 @@ export interface ParseStatePayload {
     suggestedProjects?: ProjectSuggestion[];
   };
 }
+
+// ==========================================
+// User & Team DTOs
+// ==========================================
+
+export class InviteUserDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  role: string;
+
+  @IsString()
+  @IsOptional()
+  password?: string;
+}
+
+export class UpdateUserRoleDto {
+  @IsString()
+  @IsNotEmpty()
+  role: string;
+}
+

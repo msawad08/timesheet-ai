@@ -3,8 +3,17 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, Clock, LayoutDashboard, FolderKanban, Settings, LogOut } from 'lucide-react';
+import {
+  Bot,
+  Clock,
+  LayoutDashboard,
+  FolderKanban,
+  Users,
+  Settings,
+  LogOut,
+} from 'lucide-react';
 import { ChatSidebar } from '@/components/chatbot-sidebar/chat-sidebar';
+import { ThemeToggle } from '@/components/theme/theme-provider';
 
 export default function DashboardLayout({
   children,
@@ -54,22 +63,25 @@ export default function DashboardLayout({
 
   const getPageTitle = () => {
     if (pathname === '/projects') return 'Project Configurations';
+    if (pathname === '/team') return 'Team & Access Management';
     if (pathname === '/settings') return 'Settings & Preferences';
     return 'Timesheet Overview';
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-800 bg-slate-900/50 flex flex-col justify-between p-4 shrink-0">
+      <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 backdrop-blur flex flex-col justify-between p-4 shrink-0 transition-colors duration-200">
         <div className="space-y-6">
           <div className="flex items-center gap-3 px-2">
             <div className="p-2 rounded-lg bg-blue-600 text-white shadow-md shadow-blue-600/30">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-bold text-sm tracking-tight text-white">Timesheet AI</h1>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/20">
+              <h1 className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">
+                Timesheet AI
+              </h1>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold border border-blue-500/20">
                 Default Corp
               </span>
             </div>
@@ -81,7 +93,7 @@ export default function DashboardLayout({
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition ${
                 pathname === '/dashboard'
                   ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
               <LayoutDashboard className="w-4 h-4" /> Timesheet Grid
@@ -92,10 +104,21 @@ export default function DashboardLayout({
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition ${
                 pathname === '/projects'
                   ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
               <FolderKanban className="w-4 h-4" /> Projects
+            </Link>
+
+            <Link
+              href="/team"
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition ${
+                pathname === '/team'
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+              }`}
+            >
+              <Users className="w-4 h-4" /> Team
             </Link>
 
             <Link
@@ -103,7 +126,7 @@ export default function DashboardLayout({
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg font-medium transition ${
                 pathname === '/settings'
                   ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
               <Settings className="w-4 h-4" /> Settings
@@ -111,26 +134,28 @@ export default function DashboardLayout({
 
             <button
               onClick={() => setIsChatOpen(true)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 font-medium transition"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium transition"
             >
-              <Bot className="w-4 h-4 text-blue-400" /> AI Log Assistant
+              <Bot className="w-4 h-4 text-blue-500" /> AI Log Assistant
             </button>
           </nav>
         </div>
 
-        <div className="pt-4 border-t border-slate-800 space-y-2">
-          <div className="px-3 py-2 flex items-center justify-between text-xs text-slate-400">
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+          <div className="px-3 py-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <div className="truncate max-w-[140px]">
-              <p className="font-medium text-white truncate">{userProfile.name}</p>
+              <p className="font-medium text-slate-900 dark:text-white truncate">
+                {userProfile.name}
+              </p>
               <p className="text-[10px] text-slate-500 truncate">{userProfile.email}</p>
             </div>
-            <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 font-semibold shrink-0">
+            <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-300 font-semibold shrink-0">
               {userProfile.role}
             </span>
           </div>
           <Link
             href="/"
-            className="flex items-center gap-2 px-3 py-1.5 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10 rounded-lg transition"
           >
             <LogOut className="w-3.5 h-3.5" /> Sign Out
           </Link>
@@ -139,14 +164,19 @@ export default function DashboardLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <header className="h-14 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-900/30 backdrop-blur">
-          <h2 className="text-sm font-semibold text-white">{getPageTitle()}</h2>
-          <button
-            onClick={() => setIsChatOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 text-xs font-medium transition"
-          >
-            <Bot className="w-3.5 h-3.5" /> Ask AI Worker
-          </button>
+        <header className="h-14 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between bg-white/60 dark:bg-slate-900/30 backdrop-blur transition-colors duration-200">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            {getPageTitle()}
+          </h2>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-600/20 dark:hover:bg-blue-600/30 text-xs font-medium transition"
+            >
+              <Bot className="w-3.5 h-3.5" /> Ask AI Worker
+            </button>
+          </div>
         </header>
 
         <main className="p-6 flex-1">

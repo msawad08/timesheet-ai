@@ -5,6 +5,7 @@ import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { ProjectModule } from './project/project.module';
 import { TimeEntryModule } from './time-entry/time-entry.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { TimeEntryModule } from './time-entry/time-entry.module';
     AuthModule,
     ProjectModule,
     TimeEntryModule,
+    UserModule,
   ],
   controllers: [AppController],
 })
